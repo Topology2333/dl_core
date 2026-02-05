@@ -1,0 +1,24 @@
+# Build
+/target/
+
+# Cargo lock: uncomment for libs if you don't want to commit
+# Cargo.lock
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug / misc
+*.pdb
+.env
+.env.*
+
+# Rustfmt backup
+*.rs.bk

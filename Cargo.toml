@@ -1,0 +1,15 @@
+[package]
+name = "dl_core"
+version = "0.1.0"
+edition = "2021"
+description = "A layered, extensible deep learning core with autograd, parameters, and training loop"
+authors = ["dl_core"]
+license = "MIT"
+
+[dependencies]
+rand = "0.8"
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+approx = "0.5"
