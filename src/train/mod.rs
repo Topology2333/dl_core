@@ -21,8 +21,8 @@ pub struct TrainStepResult {
 
 /// Trainer: holds model, optimizer, loss fn; runs step and epoch.
 pub struct Trainer<M, O> {
-    model: M,
-    optimizer: O,
+    pub model: M,
+    pub optimizer: O,
 }
 
 impl<M: Module, O: Optimizer> Trainer<M, O> {

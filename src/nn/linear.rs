@@ -67,7 +67,7 @@ impl Module for Linear {
         let w_id = g.var(self.weight.data().clone());
         let b_id = g.var(self.bias.data().clone());
         let matmul_id = g.matmul(x_id, w_id)?;
-        let out_id = g.add(matmul_id, b_id)?;
+        let out_id = g.add_broadcast(matmul_id, b_id)?;
         Ok((out_id, vec![w_id, b_id]))
     }
 }

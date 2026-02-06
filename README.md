@@ -13,24 +13,38 @@ A layered, extensible deep learning core in Rust: autograd, parameters, and trai
 
 With the same input, same random seed, and same parameters, the implementation aims for the same output. Call `dl_core::set_seed(seed)` before model init or training. Initialization (e.g. Xavier) uses the thread-local RNG. In single-threaded CPU execution, reduce order is fixed for reproducibility. Exceptions may apply when using future backends (e.g. GPU) or third-party code.
 
-## Usage sketch
+## Usage
+
+Minimal training loop: build dataset, model, optimizer, then run epochs.
 
 ```rust
-use dl_core::{CpuBackend, Linear, SGD, Trainer, set_seed, mse_graph};
+use dl_core::{CpuBackend, Linear, SGD, Trainer, set_seed};
+use dl_core::data::{InMemoryDataset, DataLoader};
 use std::sync::Arc;
 
 set_seed(42);
-let backend = Arc::new(dl_core::CpuBackend::new());
+let backend = Arc::new(CpuBackend::new());
 let mut model = Linear::new(2, 1, backend.clone()).unwrap();
 model.init_xavier().unwrap();
-let mut opt = SGD::new(0.01);
+let mut opt = SGD::new(0.02);
 let mut trainer = Trainer::new(model, opt);
-// trainer.step(backend, &input, &target);
+// ... build InMemoryDataset, then:
+// dataloader.reset();
+// let (avg_loss, n) = trainer.run_epoch(backend.clone(), &mut dataloader)?;
 ```
+
+A full runnable example is the **linear regression** end-to-end test: fit `y = 2*x1 + 3*x2 + bias` with MSE. Run it with:
+
+```bash
+cargo test test_linear_regression
+```
+
+See [tests/train_linear_regression.rs](tests/train_linear_regression.rs) for the complete code (dataset construction, multiple epochs, and assertions on loss decrease and learned weights).
 
 ## Tests and gradient check
 
-Numerical gradient checks compare autograd gradients with finite differences. See `tests/grad_check.rs` and `autograd::check::check_gradients`.
+- **Gradient checks**: `tests/grad_check.rs` compares autograd with finite differences (`autograd::check::check_gradients`).
+- **End-to-end training**: `tests/train_linear_regression.rs` runs a full training loop and asserts loss decrease and that the model learns the true weights.
 
 ## License
 

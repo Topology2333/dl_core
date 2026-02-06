@@ -177,9 +177,14 @@ impl Graph {
         Ok(id)
     }
 
-    /// Add: a + b
+    /// Add: a + b (same shape)
     pub fn add(&mut self, a: NodeId, b: NodeId) -> GraphResult<NodeId> {
         self.apply(OpId::Add, &[a, b])
+    }
+
+    /// AddBroadcast: a (e.g. [N,K]) + b (e.g. [K])
+    pub fn add_broadcast(&mut self, a: NodeId, b: NodeId) -> GraphResult<NodeId> {
+        self.apply(OpId::AddBroadcast, &[a, b])
     }
 
     /// Sub: a - b

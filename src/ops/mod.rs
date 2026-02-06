@@ -7,6 +7,7 @@ use std::sync::Arc;
 use thiserror::Error;
 
 pub mod add;
+pub mod add_broadcast;
 pub mod sub;
 pub mod matmul;
 pub mod relu;
@@ -24,6 +25,7 @@ pub type OpResult<T> = Result<T, OpError>;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum OpId {
     Add,
+    AddBroadcast,
     Sub,
     Mul,
     MatMul,
@@ -68,6 +70,7 @@ impl OpRegistry {
             ops: std::collections::HashMap::new(),
         };
         reg.register(Arc::new(add::Add));
+        reg.register(Arc::new(add_broadcast::AddBroadcast));
         reg.register(Arc::new(sub::Sub));
         reg.register(Arc::new(mul::Mul));
         reg.register(Arc::new(matmul::MatMul));
