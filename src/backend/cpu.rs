@@ -260,6 +260,21 @@ impl Backend for CpuBackend {
             .map_err(|e| BackendError(e.to_string()))
     }
 
+    fn div(&self, a: &Tensor, b: &Tensor) -> BackendResult<Tensor> {
+        if !a.shape().same_as(b.shape()) {
+            return Err(BackendError("div: shape mismatch".into()));
+        }
+        let n = a.numel();
+        let mut out = vec![0.0f32; n];
+        let ad = a.data();
+        let bd = b.data();
+        for i in 0..n {
+            out[i] = ad[i] / bd[i];
+        }
+        Tensor::from_vec(out, a.shape().clone(), Arc::new(CpuBackend::new()))
+            .map_err(|e| BackendError(e.to_string()))
+    }
+
     fn relu_backward(&self, grad_out: &Tensor, input: &Tensor) -> BackendResult<Tensor> {
         if !grad_out.shape().same_as(input.shape()) {
             return Err(BackendError("relu_backward: shape mismatch".into()));
@@ -285,6 +300,61 @@ impl Backend for CpuBackend {
         let fd = fwd_output.data();
         for i in 0..n {
             out[i] = gd[i] * fd[i] * (1.0 - fd[i]);
+        }
+        Tensor::from_vec(out, fwd_output.shape().clone(), Arc::new(CpuBackend::new()))
+            .map_err(|e| BackendError(e.to_string()))
+    }
+
+    fn softmax_last_dim(&self, a: &Tensor) -> BackendResult<Tensor> {
+        let dims = a.shape().dims();
+        if dims.is_empty() {
+            return Err(BackendError("softmax: need at least 1 dim".into()));
+        }
+        let last_dim = dims[dims.len() - 1];
+        let n = a.numel();
+        let ad = a.data();
+        let mut out = vec![0.0f32; n];
+        let row_size = last_dim;
+        let num_rows = n / row_size;
+        for row in 0..num_rows {
+            let base = row * row_size;
+            let row_max = ad[base..base + row_size]
+                .iter()
+                .fold(f32::NEG_INFINITY, |a, &b| a.max(b));
+            let mut sum = 0.0;
+            for j in 0..row_size {
+                let v = (ad[base + j] - row_max).exp();
+                out[base + j] = v;
+                sum += v;
+            }
+            for j in 0..row_size {
+                out[base + j] /= sum;
+            }
+        }
+        Tensor::from_vec(out, a.shape().clone(), Arc::new(CpuBackend::new()))
+            .map_err(|e| BackendError(e.to_string()))
+    }
+
+    fn softmax_backward(&self, grad_out: &Tensor, fwd_output: &Tensor) -> BackendResult<Tensor> {
+        if !grad_out.shape().same_as(fwd_output.shape()) {
+            return Err(BackendError("softmax_backward: shape mismatch".into()));
+        }
+        let dims = fwd_output.shape().dims();
+        let last_dim = dims[dims.len() - 1];
+        let n = fwd_output.numel();
+        let num_rows = n / last_dim;
+        let gd = grad_out.data();
+        let yd = fwd_output.data();
+        let mut out = vec![0.0f32; n];
+        for row in 0..num_rows {
+            let base = row * last_dim;
+            let mut sum_gy = 0.0;
+            for j in 0..last_dim {
+                sum_gy += gd[base + j] * yd[base + j];
+            }
+            for j in 0..last_dim {
+                out[base + j] = yd[base + j] * (gd[base + j] - sum_gy);
+            }
         }
         Tensor::from_vec(out, fwd_output.shape().clone(), Arc::new(CpuBackend::new()))
             .map_err(|e| BackendError(e.to_string()))

@@ -109,4 +109,19 @@ impl Parameter {
             frozen: false,
         })
     }
+
+    /// Overwrite this parameter's data and name from state (in-place).
+    pub fn load_state(
+        &mut self,
+        state: &ParameterState,
+        backend: Arc<dyn crate::backend::Backend>,
+    ) -> Result<(), crate::tensor::TensorError> {
+        let shape = crate::shape::Shape::new(state.shape.clone());
+        let data = backend
+            .from_vec(state.data.clone(), shape)
+            .map_err(crate::tensor::TensorError::from)?;
+        *self.data_mut() = data;
+        self.set_name(state.name.clone());
+        Ok(())
+    }
 }

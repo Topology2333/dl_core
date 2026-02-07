@@ -41,3 +41,37 @@ pub fn mse_graph(
     let scale_id = g.mul(sum_id, c_id)?;
     Ok(scale_id)
 }
+
+/// Cross-entropy in graph: logits_id (logits [B, C]), target one-hot [B, C].
+/// Loss = -mean over batch of sum_over_C(target * log(softmax(logits))).
+pub fn ce_graph(
+    g: &mut Graph,
+    logits_id: NodeId,
+    target: &Tensor,
+) -> crate::GraphResult<NodeId> {
+    let (b, backend) = {
+        let logits_data = g.data(logits_id)?;
+        if !logits_data.shape().same_as(target.shape()) {
+            return Err(crate::GraphError(
+                "ce_graph: logits and target shape mismatch".into(),
+            ));
+        }
+        let b = logits_data.shape().dims()[0] as f32;
+        let backend = logits_data.backend();
+        (b, backend)
+    };
+    let softmax_id = g.softmax(logits_id)?;
+    let log_id = g.log(softmax_id)?;
+    let target_id = g.var(target.clone());
+    let mul_id = g.mul(target_id, log_id)?;
+    let sum_id = g.sum(mul_id)?;
+    let constant = Tensor::from_vec(
+        vec![-1.0 / b],
+        crate::shape::Shape::new(vec![1]),
+        backend,
+    )
+    .map_err(|e| crate::GraphError(e.to_string()))?;
+    let c_id = g.var(constant);
+    let loss_id = g.mul(sum_id, c_id)?;
+    Ok(loss_id)
+}

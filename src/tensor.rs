@@ -116,6 +116,26 @@ impl Tensor {
         self.backend.sigmoid(self).map_err(TensorError::from)
     }
 
+    /// Element-wise exp.
+    pub fn exp(&self) -> TensorResult<Tensor> {
+        self.backend.exp(self).map_err(TensorError::from)
+    }
+
+    /// Element-wise natural log.
+    pub fn log(&self) -> TensorResult<Tensor> {
+        self.backend.log(self).map_err(TensorError::from)
+    }
+
+    /// Softmax along last dimension.
+    pub fn softmax_last_dim(&self) -> TensorResult<Tensor> {
+        self.backend.softmax_last_dim(self).map_err(TensorError::from)
+    }
+
+    /// Softmax backward: grad_in = y * (grad_out - sum(grad_out * y, last_dim)).
+    pub fn softmax_backward(&self, grad_out: &Tensor) -> TensorResult<Tensor> {
+        self.backend.softmax_backward(grad_out, self).map_err(TensorError::from)
+    }
+
     /// Broadcast add (e.g. bias + matrix).
     pub fn add_broadcast(&self, rhs: &Tensor) -> TensorResult<Tensor> {
         self.backend.add_broadcast(self, rhs).map_err(TensorError::from)
@@ -136,6 +156,11 @@ impl Tensor {
         self.backend.scale(self, s).map_err(TensorError::from)
     }
 
+    /// Element-wise division self / rhs.
+    pub fn div(&self, rhs: &Tensor) -> TensorResult<Tensor> {
+        self.backend.div(self, rhs).map_err(TensorError::from)
+    }
+
     /// ReLU backward: grad_out * (self > 0).
     pub fn relu_backward(&self, grad_out: &Tensor) -> TensorResult<Tensor> {
         self.backend.relu_backward(grad_out, self).map_err(TensorError::from)
@@ -144,6 +169,40 @@ impl Tensor {
     /// Sigmoid backward: grad_out * fwd_output * (1 - fwd_output). Self is fwd_output.
     pub fn sigmoid_backward(&self, grad_out: &Tensor) -> TensorResult<Tensor> {
         self.backend.sigmoid_backward(grad_out, self).map_err(TensorError::from)
+    }
+
+    /// Stack tensors along dimension 0. All tensors must have the same shape and backend.
+    /// Result shape: [tensors.len(), dim0, dim1, ...].
+    pub fn stack(tensors: &[Tensor], dim: usize) -> TensorResult<Tensor> {
+        if tensors.is_empty() {
+            return Err(TensorError::Shape(ShapeError("stack: empty slice".into())));
+        }
+        if dim != 0 {
+            return Err(TensorError::Shape(ShapeError(
+                "stack: only dim=0 supported".into(),
+            )));
+        }
+        let first = &tensors[0];
+        let backend = first.backend();
+        let elem_shape = first.shape();
+        let numel_per = elem_shape.numel();
+        for t in tensors.iter().skip(1) {
+            if !t.shape().same_as(elem_shape) {
+                return Err(TensorError::Shape(ShapeError(
+                    "stack: all tensors must have same shape".into(),
+                )));
+            }
+        }
+        let b = tensors.len();
+        let mut out_dims = vec![b];
+        out_dims.extend(elem_shape.dims());
+        let out_shape = Shape::new(out_dims);
+        let mut data = vec![0.0f32; out_shape.numel()];
+        for (i, t) in tensors.iter().enumerate() {
+            let offset = i * numel_per;
+            data[offset..offset + numel_per].copy_from_slice(t.data());
+        }
+        Tensor::from_vec(data, out_shape, backend)
     }
 }
 

@@ -31,8 +31,14 @@ pub trait Backend: Send + Sync {
     fn add_broadcast(&self, a: &Tensor, b: &Tensor) -> BackendResult<Tensor>;
     fn transpose(&self, a: &Tensor) -> BackendResult<Tensor>;
     fn scale(&self, a: &Tensor, s: f32) -> BackendResult<Tensor>;
+    /// Element-wise a / b (same shape).
+    fn div(&self, a: &Tensor, b: &Tensor) -> BackendResult<Tensor>;
     fn relu_backward(&self, grad_out: &Tensor, input: &Tensor) -> BackendResult<Tensor>;
     fn sigmoid_backward(&self, grad_out: &Tensor, fwd_output: &Tensor) -> BackendResult<Tensor>;
+    /// Softmax along last dimension. For 2D [B, C], each row sums to 1.
+    fn softmax_last_dim(&self, a: &Tensor) -> BackendResult<Tensor>;
+    /// Backward for softmax: grad_in = y * (grad_out - sum(grad_out * y, last_dim)).
+    fn softmax_backward(&self, grad_out: &Tensor, fwd_output: &Tensor) -> BackendResult<Tensor>;
 }
 
 pub mod cpu;

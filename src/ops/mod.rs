@@ -14,6 +14,8 @@ pub mod relu;
 pub mod mul;
 pub mod sigmoid;
 pub mod sum;
+pub mod softmax;
+pub mod log;
 
 #[derive(Error, Debug)]
 #[error("op error: {0}")]
@@ -32,6 +34,8 @@ pub enum OpId {
     ReLU,
     Sigmoid,
     Sum,
+    Softmax,
+    Log,
 }
 
 /// Unified operator trait: forward, backward, and shape constraints.
@@ -77,6 +81,8 @@ impl OpRegistry {
         reg.register(Arc::new(relu::ReLU));
         reg.register(Arc::new(sigmoid::Sigmoid));
         reg.register(Arc::new(sum::Sum));
+        reg.register(Arc::new(softmax::Softmax));
+        reg.register(Arc::new(log::Log));
         reg
     }
 

@@ -216,6 +216,16 @@ impl Graph {
     pub fn sigmoid(&mut self, a: NodeId) -> GraphResult<NodeId> {
         self.apply(OpId::Sigmoid, &[a])
     }
+
+    /// Softmax along last dimension
+    pub fn softmax(&mut self, a: NodeId) -> GraphResult<NodeId> {
+        self.apply(OpId::Softmax, &[a])
+    }
+
+    /// Log (natural log)
+    pub fn log(&mut self, a: NodeId) -> GraphResult<NodeId> {
+        self.apply(OpId::Log, &[a])
+    }
 }
 
 impl Default for Graph {

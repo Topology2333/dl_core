@@ -1,8 +1,9 @@
 //! Module: holds parameters, forward returns Tensor. Layer/Model compose Module.
 
 use crate::autograd::{Graph, NodeId};
-use crate::parameter::Parameter;
+use crate::parameter::{Parameter, ParameterState};
 use crate::tensor::Tensor;
+use std::sync::Arc;
 
 /// Module: has parameters and can forward (pure or with graph).
 pub trait Module {
@@ -22,4 +23,32 @@ pub trait Module {
         g: &mut Graph,
         x_id: NodeId,
     ) -> crate::GraphResult<(NodeId, Vec<NodeId>)>;
+
+    /// Collect all parameter states in order (for save).
+    fn state_dict(&self) -> Vec<ParameterState> {
+        self.parameters().iter().map(|p| p.to_state()).collect()
+    }
+
+    /// Load parameter states in order (for load). State count must match parameter count.
+    fn load_state_dict(
+        &mut self,
+        states: &[ParameterState],
+        backend: Arc<dyn crate::backend::Backend>,
+    ) -> crate::TensorResult<()> {
+        let mut params = self.parameters_mut();
+        if params.len() != states.len() {
+            return Err(crate::TensorError::Shape(crate::ShapeError(
+                format!(
+                    "load_state_dict: got {} states, module has {} parameters",
+                    states.len(),
+                    params.len()
+                )
+                .into(),
+            )));
+        }
+        for (p, s) in params.iter_mut().zip(states.iter()) {
+            p.load_state(s, backend.clone())?;
+        }
+        Ok(())
+    }
 }
